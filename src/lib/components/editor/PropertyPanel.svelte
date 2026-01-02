@@ -75,8 +75,9 @@
 
 			<div class="grid grid-cols-2 gap-2">
 				<div>
-					<label class="mb-1 block text-neutral-500">X</label>
+					<label for="node-x" class="mb-1 block text-neutral-500">X</label>
 					<input
+						id="node-x"
 						type="number"
 						value={Math.round(selectedNode.x * 10) / 10}
 						oninput={(e) => updateNode('x', parseFloat(e.currentTarget.value))}
@@ -84,8 +85,9 @@
 					/>
 				</div>
 				<div>
-					<label class="mb-1 block text-neutral-500">Y</label>
+					<label for="node-y" class="mb-1 block text-neutral-500">Y</label>
 					<input
+						id="node-y"
 						type="number"
 						value={Math.round(selectedNode.y * 10) / 10}
 						oninput={(e) => updateNode('y', parseFloat(e.currentTarget.value))}

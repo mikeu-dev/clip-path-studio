@@ -1,8 +1,11 @@
 <script>
 	import EditorCanvas from '$lib/components/editor/EditorCanvas.svelte';
 	import PropertyPanel from '$lib/components/editor/PropertyPanel.svelte';
+	import ExportModal from '$lib/components/ui/ExportModal.svelte';
 	import { setContext, getContext } from 'svelte';
 	import { EDITOR_KEY, EditorStore } from '$lib/stores/editor.svelte';
+	import { SVGGenerator } from '$lib/engine/export/SVGGenerator';
+	import { CSSGenerator } from '$lib/engine/export/CSSGenerator';
 	import '../../app.css';
 
 	// We can't access store directly here because it's created inside EditorCanvas?
@@ -12,6 +15,17 @@
 	// Let's refactor: Create store at Page level.
 	const store = new EditorStore();
 	setContext(EDITOR_KEY, store);
+
+	let isExportOpen = false;
+	let exportContent = '';
+	let exportTitle = 'Export SVG';
+
+	function handleExport() {
+		// Default to SVG for now
+		exportContent = SVGGenerator.toSVGString(store.paths);
+		exportTitle = 'Export SVG';
+		isExportOpen = true;
+	}
 </script>
 
 <div
@@ -38,7 +52,7 @@
 			</div>
 			<button
 				class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-500"
-				>Export SVG</button
+				onclick={handleExport}>Export SVG</button
 			>
 		</div>
 	</header>
@@ -89,4 +103,11 @@
 			<PropertyPanel />
 		</aside>
 	</div>
+
+	<ExportModal
+		isOpen={isExportOpen}
+		title={exportTitle}
+		content={exportContent}
+		onClose={() => (isExportOpen = false)}
+	/>
 </div>
