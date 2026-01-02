@@ -10,6 +10,9 @@ export class EditorStore {
     canUndo = $state(false);
     canRedo = $state(false);
 
+    // Tool state
+    activeTool = $state('select');
+
     readonly history: CommandHistory;
 
     constructor() {
@@ -46,6 +49,10 @@ export class EditorStore {
 
     select(hit: HitResult | null) {
         this.selection = hit;
+    }
+
+    setTool(toolName: string) {
+        this.activeTool = toolName;
     }
 }
 
