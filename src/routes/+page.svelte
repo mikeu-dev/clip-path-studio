@@ -6,7 +6,6 @@
 	import { EDITOR_KEY, EditorStore } from '$lib/stores/editor.svelte';
 	import { SVGGenerator } from '$lib/engine/export/SVGGenerator';
 	import { CSSGenerator } from '$lib/engine/export/CSSGenerator';
-	import '../../app.css';
 
 	// We can't access store directly here because it's created inside EditorCanvas?
 	// Wait, EditorCanvas creates the store. That's inverted dependency.
