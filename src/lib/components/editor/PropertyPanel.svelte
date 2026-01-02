@@ -4,6 +4,8 @@
 	import { NodeType } from '$lib/engine/core/PathNode';
 	import { Vector2 } from '$lib/engine/math/Vector2';
 
+	import { UpdatePathCommand } from '$lib/engine/commands/UpdatePathCommand';
+
 	const store = getContext<EditorStore>(EDITOR_KEY);
 
 	// Derived state for selection
@@ -62,6 +64,17 @@
 		newPaths[pathIdx] = newPath;
 		store.setPaths(newPaths);
 	}
+
+	function updatePathClosed(path: import('$lib/engine/core/Path').Path, closed: boolean) {
+		const newPath = path.setClosed(closed);
+		// Update Store
+		const index = store.paths.findIndex((p) => p.id === path.id);
+		if (index !== -1) {
+			const newPaths = [...store.paths];
+			newPaths[index] = newPath;
+			store.setPaths(newPaths);
+		}
+	}
 </script>
 
 <div class="p-4 text-xs">
@@ -98,10 +111,28 @@
 		</div>
 	{:else if store.selection && store.selection.type === 'path'}
 		<div class="rounded bg-neutral-800/50 p-2">
-			<div class="font-semibold text-neutral-400">Path Selected</div>
-			<div class="mt-1 text-neutral-500">ID: {store.selection.pathId.slice(0, 8)}...</div>
+			<div class="mb-2 font-semibold text-neutral-400">Path Properties</div>
+			<div class="mb-2 text-xs text-neutral-500">ID: {store.selection.pathId.slice(0, 8)}...</div>
+
+			{#if store.paths.find((p) => p.id === store.selection!.pathId)}
+				{@const path = store.paths.find((p) => p.id === store.selection!.pathId)}
+				{#if path}
+					<label class="flex items-center gap-2 text-sm text-neutral-300">
+						<input
+							type="checkbox"
+							checked={path.closed}
+							onchange={(e) => {
+								updatePathClosed(path, e.currentTarget.checked);
+							}}
+							class="rounded border-neutral-600 bg-neutral-700 text-blue-500 focus:ring-blue-500/50"
+						/>
+						Closed Path
+					</label>
+				{/if}
+			{/if}
 		</div>
 	{:else}
 		<div class="mt-8 text-center text-neutral-600 italic">No selection</div>
 	{/if}
 </div>
+```

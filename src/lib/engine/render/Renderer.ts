@@ -97,8 +97,19 @@ export class Renderer {
 
         // 4. Draw Paths
         for (const path of this.paths) {
+            ctx.save();
+
+            // Apply Path Transform (Multiply on top of Scene Transform)
+            // ctx.transform(a, b, c, d, e, f)
+            // a=m00, c=m01, e=m02
+            // b=m10, d=m11, f=m12
+            const pt = path.transform.elements;
+            ctx.transform(pt[0], pt[3], pt[1], pt[4], pt[2], pt[5]);
+
             this.drawPath(ctx, path);
             this.drawHandles(ctx, path); // Only if selected usually, but draw all for now
+
+            ctx.restore();
         }
 
         ctx.restore();

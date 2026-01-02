@@ -14,6 +14,7 @@ export interface Tool {
     onDown(pos: Vector2, e: PointerEvent): void;
     onMove(pos: Vector2, e: PointerEvent): void;
     onUp(pos: Vector2, e: PointerEvent): void;
+    onKeyDown?(e: KeyboardEvent): void;
     onActivate(): void;
     onDeactivate(): void;
 }

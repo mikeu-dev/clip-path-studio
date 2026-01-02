@@ -7,6 +7,8 @@ export interface HitResult {
     pathId: string;
     nodeId?: string;
     nodeIndex?: number;
+    segmentIndex?: number;
+    t?: number;
     distance: number;
 }
 
@@ -31,14 +33,23 @@ export class HitTest {
 
         // Iterate all paths
         for (const path of paths) {
+            const matrix = path.transform;
+
+            // Optimization: Transform local bounding box to world AABB?
+            // Skipped for now to ensure correctness with Transforms first.
+            // Or simple check: transform center of local bbox and check radius?
+            // Let's rely on efficient iteration for < 100 paths.
+
             // Check bounding box optimization
-            if (!path.getBoundingBox().expand(threshold).contains(point)) {
-                continue;
-            }
+            // if (!path.getBoundingBox().expand(threshold).contains(point)) {
+            //     continue;
+            // }
 
             path.nodes.forEach((node, index) => {
-                // Check Node Center
-                const distNode = point.distanceTo(node.position);
+                // Check Node Center (World Space)
+                const worldPos = matrix.transformPoint(node.position);
+                const distNode = point.distanceTo(worldPos);
+
                 if (distNode < threshold) {
                     tryHit({
                         type: 'node',
@@ -49,11 +60,12 @@ export class HitTest {
                     });
                 }
 
-                // Check Handles (usually smaller threshold)
+                // Check Handles (World Space)
                 // In a real app we only check handles if selected.
                 // We'll check them anyway for now but maybe assume they are always visible?
                 if (!node.handleIn.equals(node.position)) {
-                    const distIn = point.distanceTo(node.handleIn);
+                    const worldHandleIn = matrix.transformPoint(node.handleIn);
+                    const distIn = point.distanceTo(worldHandleIn);
                     if (distIn < handleThreshold) {
                         tryHit({
                             type: 'handle-in',
@@ -66,7 +78,8 @@ export class HitTest {
                 }
 
                 if (!node.handleOut.equals(node.position)) {
-                    const distOut = point.distanceTo(node.handleOut);
+                    const worldHandleOut = matrix.transformPoint(node.handleOut);
+                    const distOut = point.distanceTo(worldHandleOut);
                     if (distOut < handleThreshold) {
                         tryHit({
                             type: 'handle-out',
@@ -92,36 +105,51 @@ export class HitTest {
         // 2. Check Paths (Segments)
         // Expensive check.
         for (const path of paths) {
-            if (!path.getBoundingBox().expand(threshold).contains(point)) continue;
+            // Basic AABB check logic skip for simplicity with transform
+            // if (!path.getBoundingBox().expand(threshold).contains(point)) continue;
 
+            const matrix = path.transform;
             const curves = path.toCurves();
+
             for (let i = 0; i < curves.length; i++) {
                 const curve = curves[i];
+
                 // Simple bounding box check for curve
-                if (!curve.getBoundingBox().expand(threshold).contains(point)) continue;
+                // if (!curve.getBoundingBox().expand(threshold).contains(point)) continue;
+
+                // Transform curve to world space for distance check
+                // We create a temp curve structure or just evaluate transformed points
 
                 // Approximate distance
                 // We can use a LUT of 10-20 points
                 const samples = 20;
                 let localBestDist = Infinity;
+                let localBestT = -1;
 
                 // Sample points
                 for (let j = 0; j <= samples; j++) {
-                    const p = curve.evaluate(j / samples);
-                    const d = p.distanceTo(point);
-                    if (d < localBestDist) localBestDist = d;
-                }
+                    const t = j / samples;
+                    const localP = curve.evaluate(t);
+                    const worldP = matrix.transformPoint(localP);
 
-                // Refine with binary search?
-                // For now LUT is okay for selection.
+                    const d = worldP.distanceTo(point);
+                    if (d < localBestDist) {
+                        localBestDist = d;
+                        localBestT = t;
 
-                if (localBestDist < threshold && localBestDist < bestDist) {
-                    bestDist = localBestDist;
-                    bestHit = {
-                        type: 'path',
-                        pathId: path.id,
-                        distance: localBestDist
-                    };
+                        // Check if better than global best
+                        if (localBestDist < threshold && localBestDist < bestDist) {
+                            bestDist = localBestDist;
+                            bestHit = {
+                                type: 'path',
+                                pathId: path.id,
+                                distance: localBestDist,
+                                segmentIndex: i, // Reuse nodeIndex as segmentIndex
+                                t: localBestT,
+                            };
+                            // Extend HitResult dynamically or assume nodeIndex is segmentIndex for type='path'
+                        }
+                    }
                 }
             }
         }

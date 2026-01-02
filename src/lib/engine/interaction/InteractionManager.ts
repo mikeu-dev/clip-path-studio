@@ -28,7 +28,18 @@ export class InteractionManager {
             onUp: (p, e) => this.activeTool?.onUp(p, e)
         });
 
+        // Listen to Global Key events
+        window.addEventListener('keydown', this.handleKeyDown);
+
         this.setupTools();
+    }
+
+    private handleKeyDown = (e: KeyboardEvent) => {
+        // Prevent default if tool handles it?
+        // Let's pass to tool
+        if (this.activeTool?.onKeyDown) {
+            this.activeTool.onKeyDown(e);
+        }
     }
 
     private setupTools() {
@@ -68,5 +79,6 @@ export class InteractionManager {
 
     destroy() {
         this.input.destroy();
+        window.removeEventListener('keydown', this.handleKeyDown);
     }
 }

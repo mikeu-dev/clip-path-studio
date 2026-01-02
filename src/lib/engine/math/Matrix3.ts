@@ -35,6 +35,11 @@ export class Matrix3 {
         );
     }
 
+    static fromArray(a: number[] | Float32Array): Matrix3 {
+        if (a.length < 9) return Matrix3.identity;
+        return new Matrix3(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
+    }
+
     // Multiply this matrix by another matrix (A * B)
     multiply(m: Matrix3): Matrix3 {
         const a = this.elements;
