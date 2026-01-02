@@ -1,38 +1,58 @@
-# sv
+# Clip Path Studio
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Bangun, edit, dan ekspor CSS clip-path yang kompleks dengan alat pengeditan vektor profesional.
 
-## Creating a project
+## Ringkasan
 
-If you're seeing this, you've probably already done this step. Congrats!
+Clip Path Studio adalah aplikasi web yang dirancang untuk pengembang dan desainer untuk membuat bentuk CSS `clip-path` yang presisi. Aplikasi ini menyediakan lingkungan pengeditan berbasis vektor yang mirip dengan alat desain profesional, namun dioptimalkan untuk kinerja web.
 
-```sh
-# create a new project in the current directory
-npx sv create
+## Fitur Utama
 
-# create a new project in my-app
-npx sv create my-app
-```
+- **Mesin Vektor Presisi**: Kontrol penuh atas titik (nodes), handle, dan segmen jalur.
+- **Kurva Bezier**: Dukungan penuh untuk kurva bezier kubik untuk menciptakan bentuk organik dan halus.
+- **Pratinjau Real-time**: Lihat hasil perubahan bentuk secara langsung saat mengedit.
+- **Ekspor CSS & SVG**: Hasilkan kode yang bersih dan siap pakai untuk proyek Anda.
+- **Riwayat Undo/Redo**: Eksperimen dengan aman menggunakan sistem riwayat lengkap.
 
-## Developing
+## Teknologi
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Dibangun menggunakan teknologi web modern untuk performa maksimal:
 
-```sh
-npm run dev
+- [Svelte 5](https://svelte.dev) - Framework UI yang reaktif.
+- [Vite](https://vitejs.dev) - Build tool super cepat.
+- [TailwindCSS](https://tailwindcss.com) - Framework CSS utility-first.
+- [TypeScript](https://www.typescriptlang.org) - Keamanan tipe statis.
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+## Memulai
 
-## Building
+### Prasyarat
 
-To create a production version of your app:
+- Node.js (Versi LTS terbaru direkomendasikan)
+- npm, pnpm, atau yarn
 
-```sh
-npm run build
-```
+### Instalasi
 
-You can preview the production build with `npm run preview`.
+1. Clone repositori ini
+   ```bash
+   git clone https://github.com/username-anda/clip-path-studio.git
+   ```
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+2. Instal dependensi
+   ```bash
+   npm install
+   ```
+
+3. Jalankan server pengembangan
+   ```bash
+   npm run dev
+   ```
+
+## Pengembangan
+
+- **Jalankan tes**: `npm run test`
+- **Lint kode**: `npm run lint`
+- **Format kode**: `npm run format`
+
+## Lisensi
+
+[MIT](LICENSE)
