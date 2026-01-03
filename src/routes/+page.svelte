@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import EditorCanvas from '$lib/components/editor/EditorCanvas.svelte';
 	import PropertyPanel from '$lib/components/editor/PropertyPanel.svelte';
 	import ExportModal from '$lib/components/ui/ExportModal.svelte';
