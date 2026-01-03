@@ -3,11 +3,6 @@ import { Vector2 } from './Vector2';
 import { CubicBezier } from './Bezier';
 
 describe('CubicBezier', () => {
-    // Simple curve: Straight line from (0,0) to (10,0)
-    // Control points collinear: (0,0), (3,0), (6,0), (10,0)
-    // Wait, straight line bezier needs proportional control points to be linear uniform? 
-    // Not necessarily.
-
     it('should evaluate endpoints correctly', () => {
         const p0 = new Vector2(0, 0);
         const p1 = new Vector2(0, 10);
@@ -33,8 +28,6 @@ describe('CubicBezier', () => {
             new Vector2(10, 0)
         );
         const mid = curve.evaluate(0.5);
-        // By symmetry, x should be 5.
-        // y is 0.125*0 + 0.375*10 + 0.375*10 + 0.125*0 = 3.75 + 3.75 = 7.5
         expect(mid.x).toBeCloseTo(5);
         expect(mid.y).toBeCloseTo(7.5);
     });
@@ -47,12 +40,10 @@ describe('CubicBezier', () => {
             new Vector2(10, 0)
         );
 
-        // Tangent at 0 should be direction P0 -> P1 (0, 1) usually
         const t0 = curve.tangent(0);
         expect(t0.x).toBe(0);
         expect(t0.y).toBe(1);
 
-        // Tangent at 1 should be direction P2 -> P3 (0, -10) -> normalized (0, -1)
         const t1 = curve.tangent(1);
         expect(t1.x).toBe(0);
         expect(t1.y).toBe(-1);
@@ -68,8 +59,6 @@ describe('CubicBezier', () => {
 
         const [left, right] = curve.split(0.5);
 
-        // Left curve should start at P0 and end at Mid
-        // Right curve should start at Mid and end at P3
         expect(left.p0.equals(curve.p0)).toBe(true);
         expect(left.p3.x).toBeCloseTo(5);
         expect(left.p3.y).toBeCloseTo(7.5); // Mid point
@@ -82,13 +71,10 @@ describe('CubicBezier', () => {
     it('should calculate bounding box', () => {
         const curve = new CubicBezier(
             new Vector2(0, 0),
-            new Vector2(0, 10), // Control point pulls up
-            new Vector2(10, 10), // Control point pulls up
+            new Vector2(0, 10),
+            new Vector2(10, 10),
             new Vector2(10, 0)
         );
-        // Extrema should be at t=0.5 (y=7.5)
-        // X range: 0 to 10
-        // Y range: 0 to 7.5
 
         const bbox = curve.getBoundingBox();
         expect(bbox.min.x).toBeCloseTo(0);
@@ -109,8 +95,12 @@ describe('CubicBezier', () => {
 
         const intersections = c1.intersects(c2);
         expect(intersections.length).toBeGreaterThan(0);
-        expect(intersections[0].x).toBeCloseTo(5);
-        expect(intersections[0].y).toBeCloseTo(5);
+        expect(intersections[0].point.x).toBeCloseTo(5);
+        expect(intersections[0].point.y).toBeCloseTo(5);
+
+        // Check t values - c1 is uniform linear-ish, so at 0.5 (x=5)
+        expect(intersections[0].t1).toBeCloseTo(0.5, 1);
+        expect(intersections[0].t2).toBeCloseTo(0.5, 1);
     });
 
     it('should return empty for non-intersecting curves', () => {
@@ -133,14 +123,11 @@ describe('CubicBezier', () => {
             new Vector2(10, 10), new Vector2(15, 5), new Vector2(15, 5), new Vector2(20, 0)
         );
 
-        // This might be tricky due to precision/deduplication at boundaries?
-        // Let's see if our logic catches it.
         const intersections = c1.intersects(c2, 0.1);
-        // Note: endpoint intersection might need specific handling or just rely on close enough check
 
         if (intersections.length > 0) {
-            expect(intersections[0].x).toBeCloseTo(10);
-            expect(intersections[0].y).toBeCloseTo(10);
+            expect(intersections[0].point.x).toBeCloseTo(10);
+            expect(intersections[0].point.y).toBeCloseTo(10);
         }
     });
 
@@ -155,7 +142,7 @@ describe('CubicBezier', () => {
 
         const intersections = c1.intersects(c2);
         expect(intersections.length).toBeGreaterThan(0);
-        expect(intersections[0].x).toBeCloseTo(5);
-        expect(intersections[0].y).toBeCloseTo(5);
+        expect(intersections[0].point.x).toBeCloseTo(5);
+        expect(intersections[0].point.y).toBeCloseTo(5);
     });
 });

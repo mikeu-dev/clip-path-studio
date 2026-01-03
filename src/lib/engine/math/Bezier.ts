@@ -110,64 +110,6 @@ export class CubicBezier {
         let minY = Math.min(this.p0.y, this.p3.y);
         let maxY = Math.max(this.p0.y, this.p3.y);
 
-        // Find derivative roots for X and Y components to find extrema
-        // coefficients of derivative quadratic at^2 + bt + c = 0
-        // x(t) = a*t^3 + b*t^2 + c*t + d
-        // x'(t) = 3at^2 + 2bt + c
-
-        // More simple form using control points:
-        // P(t) = (1-t)^3 P0 + 3(1-t)^2 t P1 + 3(1-t) t^2 P2 + t^3 P3
-        // P'(t) roots?
-
-        // We reuse derivative formulation from tangent, but component wise.
-        // 3(1-t)^2(P1-P0) + 6(1-t)t(P2-P1) + 3t^2(P3-P2) = 0
-        // Let a=3(P1-P0), b=3(P2-P1), c=3(P3-P2)? No, those are control points of derivative.
-        // Derivative is Quadratic Bezier with points D0, D1, D2
-        // D(t) = (1-t)^2 D0 + 2(1-t)t D1 + t^2 D2
-        //      = (1-2t+t^2)D0 + (2t-2t^2)D1 + t^2 D2
-        //      = t^2(D0 - 2D1 + D2) + t(2D1 - 2D0) + D0
-        // Quadratic equation At^2 + Bt + C = 0
-
-        const d0 = this.p1.sub(this.p0).mul(3);
-        const d1 = this.p2.sub(this.p1).mul(3);
-        const d2 = this.p3.sub(this.p2).mul(3);
-
-        const checkDimension = (
-            p0: number, p1: number, p2: number, p3: number,
-            d0: number, d1: number, d2: number
-        ) => {
-            const a = d0 - 2 * d1 + d2;
-            const b = 2 * (d1 - d0);
-            const c = d0;
-
-            // Solve at^2 + bt + c = 0
-            if (Math.abs(a) < EPSILON) {
-                // Linear bt + c = 0 -> t = -c/b
-                if (Math.abs(b) > EPSILON) {
-                    const t = -c / b;
-                    if (t > 0 && t < 1) {
-                        const val = this.evaluate(t); // We only need one dimension actually but easier to call eval
-                        // Wait, checking dimension passed in args? No, evaluation does full vector.
-                        // Let's refine.
-                    }
-                }
-            } else {
-                const disc = b * b - 4 * a * c;
-                if (disc >= 0) {
-                    const sqrtDisc = Math.sqrt(disc);
-                    const t1 = (-b + sqrtDisc) / (2 * a);
-                    const t2 = (-b - sqrtDisc) / (2 * a);
-
-                    [t1, t2].forEach(t => {
-                        if (t > 0 && t < 1) {
-                            // We track the extrema
-                            // Optimization: calculate only x or y here.
-                        }
-                    });
-                }
-            }
-        };
-
         // Implementing generic extrema finder
         const getExtrema = (p0: number, p1: number, p2: number, p3: number): number[] => {
             const a = 3 * (-p0 + 3 * p1 - 3 * p2 + p3);
@@ -228,7 +170,13 @@ export class CubicBezier {
      * Find intersection points with another cubic bezier.
      * Uses divide and conquer (Bezier Clipping / Subdivision).
      */
-    intersects(other: CubicBezier, threshold: number = 0.1, depth: number = 0): Vector2[] {
+    intersects(
+        other: CubicBezier,
+        threshold: number = 0.1,
+        depth: number = 0,
+        t1Range: [number, number] = [0, 1],
+        t2Range: [number, number] = [0, 1]
+    ): Intersection[] {
         // 1. Bounding Box Optimization
         if (!this.getBoundingBox().intersects(other.getBoundingBox())) {
             return [];
@@ -236,46 +184,73 @@ export class CubicBezier {
 
         // 2. Base case: max depth or flatness
         // If we are deep enough, or both curves are flat, we intersect them as segments
-        if (depth > 10 || (this.isFlat(threshold) && other.isFlat(threshold))) {
+        if (depth > 12 || (this.isFlat(threshold) && other.isFlat(threshold))) {
             const l1 = new LineSegment(this.p0, this.p3);
             const l2 = new LineSegment(other.p0, other.p3);
             const intersection = l1.intersects(l2);
-            return intersection ? [intersection] : [];
+
+            if (intersection) {
+                // Map intersection point to t values
+                const getT = (seg: LineSegment, p: Vector2) => {
+                    const lenSq = seg.lengthSq;
+                    if (lenSq < EPSILON) return 0;
+                    return p.sub(seg.start).dot(seg.end.sub(seg.start)) / lenSq;
+                };
+
+                const localT1 = getT(l1, intersection);
+                const localT2 = getT(l2, intersection);
+
+                const t1 = t1Range[0] + (t1Range[1] - t1Range[0]) * localT1;
+                const t2 = t2Range[0] + (t2Range[1] - t2Range[0]) * localT2;
+
+                return [{
+                    point: intersection,
+                    t1: Math.max(0, Math.min(1, t1)),
+                    t2: Math.max(0, Math.min(1, t2))
+                }];
+            }
+            return [];
         }
 
         // 3. Recursive step
-        // Split the curve(s) that are not flat
+        const mid1 = (t1Range[0] + t1Range[1]) / 2;
+        const mid2 = (t2Range[0] + t2Range[1]) / 2;
+
         const thisSplit = this.split(0.5);
         const otherSplit = other.split(0.5);
 
-        const intersections: Vector2[] = [];
+        const results: Intersection[] = [];
 
         // Check all 4 combinations
-        const pairs: [CubicBezier, CubicBezier][] = [
-            [thisSplit[0], otherSplit[0]],
-            [thisSplit[0], otherSplit[1]],
-            [thisSplit[1], otherSplit[0]],
-            [thisSplit[1], otherSplit[1]]
+        const pairs: { c1: CubicBezier, c2: CubicBezier, r1: [number, number], r2: [number, number] }[] = [
+            { c1: thisSplit[0], c2: otherSplit[0], r1: [t1Range[0], mid1], r2: [t2Range[0], mid2] },
+            { c1: thisSplit[0], c2: otherSplit[1], r1: [t1Range[0], mid1], r2: [mid2, t2Range[1]] },
+            { c1: thisSplit[1], c2: otherSplit[0], r1: [mid1, t1Range[1]], r2: [t2Range[0], mid2] },
+            { c1: thisSplit[1], c2: otherSplit[1], r1: [mid1, t1Range[1]], r2: [mid2, t2Range[1]] }
         ];
 
-        for (const [c1, c2] of pairs) {
-            const points = c1.intersects(c2, threshold, depth + 1);
-            intersections.push(...points);
+        for (const pair of pairs) {
+            const points = pair.c1.intersects(pair.c2, threshold, depth + 1, pair.r1, pair.r2);
+            results.push(...points);
         }
 
         // Deduplicate points (close points)
-        const unique: Vector2[] = [];
-        for (const p of intersections) {
+        const unique: Intersection[] = [];
+        for (const res of results) {
             let found = false;
             for (const u of unique) {
-                if (p.distanceToSq(u) < threshold * threshold) {
+                if (res.point.distanceToSq(u.point) < threshold * threshold) {
                     found = true;
                     break;
                 }
             }
-            if (!found) unique.push(p);
+            if (!found) unique.push(res);
         }
 
         return unique;
+    }
+
+    reverse(): CubicBezier {
+        return new CubicBezier(this.p3, this.p2, this.p1, this.p0);
     }
 }

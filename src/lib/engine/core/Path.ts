@@ -117,7 +117,7 @@ export class Path {
 
             // Filter distinct hits (check x > point.x)
             for (const hit of hits) {
-                if (hit.x > point.x) {
+                if (hit.point.x > point.x) {
                     intersections++;
                 }
             }

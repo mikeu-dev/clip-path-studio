@@ -1,4 +1,4 @@
-import type { Path } from '../core/Path';
+import { Path } from '../core/Path';
 import { CubicBezier, type Intersection } from './Bezier';
 import { PathNode, NodeType } from '../core/PathNode';
 import { Vector2 } from './Vector2';
@@ -35,13 +35,14 @@ export class BooleanOps {
             // For simple graph approach, we just classify "Inside A" and "Inside B".
             if (fromA) return !isInB; // A outside B
             return isInA; // B inside A (we reverse B segments typically or traverse appropriately)
-        });
+        }, true);
     }
 
     private static performOp(
         pathA: Path,
         pathB: Path,
-        filter: (isInA: boolean, isInB: boolean, fromA: boolean) => boolean
+        filter: (isInA: boolean, isInB: boolean, fromA: boolean) => boolean,
+        flipB: boolean = false
     ): Path[] {
         if (!pathA.closed || !pathB.closed) return []; // Only closed paths supported for now
 
@@ -66,25 +67,127 @@ export class BooleanOps {
         }
 
         // 4. Filter Edges
-        const keptSegments = allSegments.filter(seg => {
-            // For now, simple inside check.
-            // For subtract, we might need direction flip.
-            // Let's trust generic filter for now.
+        const keptSegments: CurveSegment[] = [];
+        for (const seg of allSegments) {
             const fromA = seg.originalPathIndex === 0;
-            return filter(seg.isInside && !fromA, seg.isInside && fromA, fromA);
-            // Wait, logic above:
-            // segmentA.isInside means "Inside B"
-            // segmentB.isInside means "Inside A"
+            const keep = filter(seg.isInside && !fromA, seg.isInside && fromA, fromA);
 
-            // Union filter:
-            // if fromA, keep if !isInside (Outside B)
-            // if fromB, keep if !isInside (Outside A)
-        });
+            if (keep) {
+                if (!fromA && flipB) {
+                    // Reverse the segment
+                    seg.curve = seg.curve.reverse();
+                    // Swap t values? 
+                    // t is relative to original curve. But the curve geometry is now reversed.
+                    // If we use t for anything else later, we might need to update.
+                    // But reconstruct uses p0/p3 matching.
+                    // p0 of reversed = p3 of original.
+                    // So geometry is correct for stitching.
+                    const temp = seg.t1;
+                    seg.t1 = seg.t2;
+                    seg.t2 = temp;
+                }
+                keptSegments.push(seg);
+            }
+        }
 
         // 5. Reconstruct
-        // TODO: Implement Reconstruction
-        // return this.reconstructPaths(keptSegments);
-        return [];
+        return this.reconstructPaths(keptSegments);
+    }
+
+    private static reconstructPaths(segments: CurveSegment[]): Path[] {
+        const paths: Path[] = [];
+        const visited = new Set<CurveSegment>();
+        const toleranceSq = 0.1 * 0.1; // 0.1 tolerance
+
+        // Helper to find next segment starting where current ends
+        const findNext = (current: CurveSegment): CurveSegment | null => {
+            const endPoint = current.curve.p3;
+            for (const seg of segments) {
+                if (visited.has(seg)) continue;
+                if (seg.curve.p0.distanceToSq(endPoint) < toleranceSq) {
+                    return seg;
+                }
+            }
+            return null;
+        };
+
+        while (visited.size < segments.length) {
+            // Pick a start segment
+            let startSeg: CurveSegment | undefined;
+            for (const seg of segments) {
+                if (!visited.has(seg)) {
+                    startSeg = seg;
+                    break;
+                }
+            }
+            if (!startSeg) break;
+
+            // Trace the loop
+            const loop: CurveSegment[] = [];
+            let current: CurveSegment | null = startSeg;
+
+            while (current) {
+                loop.push(current);
+                visited.add(current);
+
+                const next = findNext(current);
+
+                // If we found a next one, perfect.
+                // If not, maybe we closed the loop to the start?
+                if (!next) {
+                    // Check if closes to startSeg
+                    if (current.curve.p3.distanceToSq(startSeg.curve.p0) < toleranceSq) {
+                        // Loop closed successfully
+                        break;
+                    } else {
+                        // Open path or broken chain?
+                        // For boolean ops on closed paths, we expect closed loops.
+                        // If we hit a dead end, abort this loop (maybe float precision issue or open geometry).
+                        console.warn('BooleanOps: Failed to close loop');
+                        break;
+                    }
+                }
+
+                if (next === startSeg) {
+                    break; // Closed loop found
+                }
+
+                current = next;
+            }
+
+            if (loop.length > 0) {
+                // Convert loop to Path
+                // Node i: Pos = loop[i].p0, HandleOut = loop[i].p1, HandleIn = loop[i-1].p2
+
+                const nodes: PathNode[] = [];
+                for (let i = 0; i < loop.length; i++) {
+                    const seg = loop[i];
+                    const prevSeg = loop[(i - 1 + loop.length) % loop.length];
+
+                    const pos = seg.curve.p0;
+                    const handleOut = seg.curve.p1;
+                    const handleIn = prevSeg.curve.p2;
+
+                    // We need handles relative to position?
+                    // PathNode definition:
+                    // handleIn: absolute or relative?
+                    // Let's check PathNode.ts.
+                    // Usually handles are absolute positions in this engine based on usage "new CubicBezier(current.position, current.handleOut..."
+
+                    nodes.push(new PathNode(
+                        pos,
+                        handleIn, // incoming handle (control point 2 of previous curve)
+                        handleOut, // outgoing handle (control point 1 of this curve)
+                        NodeType.CORNER // Defaulting to corner, user can smooth later
+                        // Actually if the split point was smooth, handles should be collinear.
+                    ));
+                }
+
+                paths.push(new Path(nodes, true));
+            }
+        }
+
+        return paths;
     }
 
     private static computeIntersections(pathA: Path, pathB: Path): Map<Path, { curveIndex: number, t: number }[]> {
