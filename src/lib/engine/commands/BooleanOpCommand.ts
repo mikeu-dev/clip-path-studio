@@ -29,6 +29,6 @@ export class BooleanOpCommand implements Command {
         this.store.setPaths([...currentPaths, ...add]);
 
         // Select new paths
-        this.store.select(add.map(p => p.id));
+        this.store.selectPaths(add.map(p => p.id));
     }
 }

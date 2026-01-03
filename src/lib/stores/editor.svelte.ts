@@ -5,7 +5,8 @@ import type { HitResult } from '../engine/interaction/HitTest';
 
 export class EditorStore {
     paths = $state<Path[]>([]);
-    selection = $state<HitResult | null>(null);
+    selection = $state<HitResult | null>(null); // Active element (for node editing/dragging)
+    selectedPathIds = $state(new Set<string>()); // Multi-selection for boolean ops/layers
 
     // Undo/Redo status exposed as reactive properties
     canUndo = $state(false);
@@ -47,13 +48,26 @@ export class EditorStore {
     }
 
     addPath(path: Path) {
-        // Direct mutation for now? No, use explicit command if we want undo.
-        // But for initial loading/setup we might just set.
         this.paths = [...this.paths, path];
     }
 
-    select(hit: HitResult | null) {
+    select(hit: HitResult | null, add: boolean = false) {
         this.selection = hit;
+
+        if (!add) {
+            this.selectedPathIds = new Set();
+        }
+
+        if (hit) {
+            this.selectedPathIds.add(hit.pathId);
+            // Re-assign to trigger reactivity if needed (Svelte 5 Set reactivity is usually fine via method, but let's be safe)
+            this.selectedPathIds = new Set(this.selectedPathIds);
+        }
+    }
+
+    selectPaths(ids: string[]) {
+        this.selectedPathIds = new Set(ids);
+        this.selection = null; // Clear active hit
     }
 
     setTool(toolName: string) {
@@ -65,7 +79,7 @@ export class EditorStore {
     // --- Actions ---
 
     performBooleanOp(op: 'union' | 'subtract') {
-        const selectedIds = Array.from(this.selection);
+        const selectedIds = Array.from(this.selectedPathIds);
         if (selectedIds.length !== 2) return;
 
         const pathA = this.paths.find(p => p.id === selectedIds[0]);
