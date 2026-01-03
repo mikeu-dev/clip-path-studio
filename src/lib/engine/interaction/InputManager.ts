@@ -1,5 +1,4 @@
 import { Vector2 } from '../math/Vector2';
-import { Matrix3 } from '../math/Matrix3';
 
 type PointerEventCallback = (pos: Vector2, originalEvent: PointerEvent) => void;
 type WheelEventCallback = (delta: Vector2, pos: Vector2, originalEvent: WheelEvent) => void;
@@ -14,7 +13,6 @@ interface InputCallbacks {
 export class InputManager {
     private canvas: HTMLCanvasElement;
     private callbacks: InputCallbacks;
-    private inverseTransform: Matrix3 = Matrix3.identity;
 
     // Track pointer state
     private isDragging: boolean = false;
@@ -24,10 +22,6 @@ export class InputManager {
         this.canvas = canvas;
         this.callbacks = callbacks;
         this.bindEvents();
-    }
-
-    setTransform(transform: Matrix3) {
-        this.inverseTransform = transform.inverse();
     }
 
     private bindEvents() {
@@ -43,19 +37,13 @@ export class InputManager {
 
     private getPointerPosition(e: PointerEvent | WheelEvent): Vector2 {
         const rect = this.canvas.getBoundingClientRect();
+
         // Screen space relative to canvas
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Apply DPI scaling if needed? 
-        // Our CanvasController logic uses CSS size for style, and internal size for buffer.
-        // Coordinate system of Context2D was scaled by dpr. 
-        // So drawing at (10,10) means 10 logical pixels.
-        // clientX/Y gives logical pixels.
-        // So (x,y) here is in "Screen Space" (logical pixels).
-
-        // Convert to World Space using Inverse Transform
-        return this.inverseTransform.transformPoint(new Vector2(x, y));
+        // Return Raw Screen Space (Canvas Local)
+        return new Vector2(x, y);
     }
 
     private handleDown = (e: PointerEvent) => {

@@ -8,6 +8,8 @@ export class Renderer {
     private controller: CanvasController;
     private paths: Path[] = [];
     private transform: Matrix3 = Matrix3.identity;
+    private pan: Vector2 = Vector2.zero;
+    private zoom: number = 1;
     private dirty: boolean = true;
     private animationFrameId: number | null = null;
 
@@ -41,6 +43,12 @@ export class Renderer {
 
     setTransform(matrix: Matrix3) {
         this.transform = matrix;
+        this.requestRender();
+    }
+
+    setViewport(pan: Vector2, zoom: number) {
+        this.pan = pan;
+        this.zoom = zoom;
         this.requestRender();
     }
 
@@ -89,8 +97,30 @@ export class Renderer {
         // y' = m10*x + m11*y + m12
         // So mapping: a=m00, c=m01, e=m02
         //             b=m10, d=m11, f=m12
+        // 2. Apply Scene Transform
+        // Matrix3 is row-major components [m00 m01 m02...].
+        // Canvas setTransform takes (a, b, c, d, e, f) -> col-major 2x3 affine.
+        // x' = ax + cy + e
+        // y' = bx + dy + f
+        // Our Matrix3:
+        // x' = m00*x + m01*y + m02
+        // y' = m10*x + m11*y + m12
+
+        // GLOBAL VIEWPORT TRANSFORM (Pan/Zoom)
+        // We apply this first? Or combine?
+        // ctx.setTransform resets the matrix.
+        // We generally want: Screen = (World * SceneMatrix) * Zoom + Pan
+
+        // Let's use setTransform to control everything explicitly.
+        // Or simpler: setTransform for Viewport, then transform() for scene matrix.
+
+        ctx.setTransform(this.zoom, 0, 0, this.zoom, this.pan.x, this.pan.y);
+
+        // Now Apply Scene Matrix (accumulate)
+        // a=m00, c=m01, e=m02
+        // b=m10, d=m11, f=m12
         const t = this.transform.elements;
-        ctx.setTransform(t[0], t[3], t[1], t[4], t[2], t[5]);
+        ctx.transform(t[0], t[3], t[1], t[4], t[2], t[5]);
 
         // 3. Draw Grid (simplified infinite grid approx)
         this.drawGrid(ctx);

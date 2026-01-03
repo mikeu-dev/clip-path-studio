@@ -65,6 +65,7 @@
 		const unsubscribe = $effect.root(() => {
 			$effect(() => {
 				renderer.setPaths(store.paths);
+				renderer.setViewport(store.pan, store.zoom);
 				interaction.setPaths(store.paths);
 			});
 

@@ -1,4 +1,5 @@
 import { Path } from '../engine/core/Path';
+import { Vector2 } from '../engine/math/Vector2';
 import { CommandHistory, type Command } from '../engine/commands/Command';
 import type { HitResult } from '../engine/interaction/HitTest';
 
@@ -9,6 +10,10 @@ export class EditorStore {
     // Undo/Redo status exposed as reactive properties
     canUndo = $state(false);
     canRedo = $state(false);
+
+    // Viewport state
+    pan = $state(Vector2.zero);
+    zoom = $state(1);
 
     // Tool state
     activeTool = $state('select');
@@ -53,6 +58,28 @@ export class EditorStore {
 
     setTool(toolName: string) {
         this.activeTool = toolName;
+    }
+
+    // --- Viewport Actions ---
+
+    setPan(pan: Vector2) {
+        this.pan = pan;
+    }
+
+    setZoom(zoom: number) {
+        this.zoom = zoom;
+    }
+
+    // --- Coordinate Helpers ---
+
+    screenToWorld(screenPos: Vector2): Vector2 {
+        // world = (screen - pan) / zoom
+        return screenPos.sub(this.pan).div(this.zoom);
+    }
+
+    worldToScreen(worldPos: Vector2): Vector2 {
+        // screen = world * zoom + pan
+        return worldPos.mul(this.zoom).add(this.pan);
     }
 }
 

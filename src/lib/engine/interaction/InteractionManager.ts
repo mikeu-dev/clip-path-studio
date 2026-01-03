@@ -23,22 +23,86 @@ export class InteractionManager {
     constructor(canvas: HTMLCanvasElement, store: EditorStore) {
         this.store = store;
         this.input = new InputManager(canvas, {
-            onDown: (p, e) => this.activeTool?.onDown(p, e),
-            onMove: (p, e) => this.activeTool?.onMove(p, e),
-            onUp: (p, e) => this.activeTool?.onUp(p, e)
+            onDown: (p, e) => this.handleDown(p, e),
+            onMove: (p, e) => this.handleMove(p, e),
+            onUp: (p, e) => this.activeTool?.onUp(this.store.screenToWorld(p), e),
+            onWheel: (d, p, e) => this.handleWheel(d, p, e)
         });
 
         // Listen to Global Key events
         window.addEventListener('keydown', this.handleKeyDown);
+        window.addEventListener('keyup', this.handleKeyUp);
 
         this.setupTools();
     }
 
+    private isPanning = false;
+    private lastPanPos = Vector2.zero;
+    private isSpacePressed = false;
+
+    private handleDown(screenPos: Vector2, e: PointerEvent) {
+        // Middle Mouse or Space+Click triggers Pan
+        if (e.button === 1 || this.isSpacePressed) {
+            this.isPanning = true;
+            this.lastPanPos = screenPos;
+            return;
+        }
+
+        const worldPos = this.store.screenToWorld(screenPos);
+        this.activeTool?.onDown(worldPos, e);
+    }
+
+    private handleMove(screenPos: Vector2, e: PointerEvent) {
+        if (this.isPanning) {
+            const delta = screenPos.sub(this.lastPanPos);
+            this.store.setPan(this.store.pan.add(delta));
+            this.lastPanPos = screenPos;
+            return;
+        }
+
+        const worldPos = this.store.screenToWorld(screenPos);
+        this.activeTool?.onMove(worldPos, e);
+    }
+
+    private handleWheel(delta: Vector2, screenPos: Vector2, e: WheelEvent) {
+        // Zoom Logic
+        // Zoom towards mouse pointer
+        // world = (screen - pan) / zoom
+        // newZoom = zoom * factor
+        // We want world position under cursor to stay same.
+        // screen = world * newZoom + newPan
+        // world * newZoom + newPan = screen
+        // newPan = screen - world * newZoom
+        //        = screen - ((screen - pan) / zoom) * newZoom
+
+        const zoomFactor = 1.1;
+        const newZoom = e.deltaY > 0 ? this.store.zoom / zoomFactor : this.store.zoom * zoomFactor;
+
+        // Clamp zoom if needed (e.g. 0.1 to 50)
+        // const clampedZoom = Math.max(0.1, Math.min(50, newZoom)); 
+
+        const worldPos = this.store.screenToWorld(screenPos);
+        const newPan = screenPos.sub(worldPos.mul(newZoom));
+
+        this.store.setZoom(newZoom);
+        this.store.setPan(newPan);
+    }
+
     private handleKeyDown = (e: KeyboardEvent) => {
-        // Prevent default if tool handles it?
-        // Let's pass to tool
+        if (e.code === 'Space' && !e.repeat) {
+            this.isSpacePressed = true;
+        }
+
         if (this.activeTool?.onKeyDown) {
             this.activeTool.onKeyDown(e);
+        }
+    }
+
+    private handleKeyUp = (e: KeyboardEvent) => {
+        if (e.code === 'Space') {
+            this.isSpacePressed = false;
+            this.isPanning = false; // Stop panning if space released? Usually dragging continues until mouseup
+            // Standard behavior: Space toggles Hand tool mode.
         }
     }
 
