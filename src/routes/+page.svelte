@@ -15,15 +15,41 @@
 	const store = new EditorStore();
 	setContext(EDITOR_KEY, store);
 
+	import { SVGParser } from '$lib/engine/export/SVGParser'; // Add import
+
 	let isExportOpen = false;
 	let exportContent = '';
 	let exportTitle = 'Export SVG';
+
+	let fileInput: HTMLInputElement; // Bind to input
 
 	function handleExport() {
 		// Default to SVG for now
 		exportContent = SVGGenerator.toSVGString(store.paths);
 		exportTitle = 'Export SVG';
 		isExportOpen = true;
+	}
+
+	function handleImportClick() {
+		if (fileInput) fileInput.click();
+	}
+
+	async function handleFileSelect(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const file = target.files?.[0];
+		if (!file) return;
+
+		const text = await file.text();
+		const importedPaths = SVGParser.parse(text);
+
+		if (importedPaths.length > 0) {
+			// Add to store
+			// Could use a Command for undo support
+			importedPaths.forEach((p) => store.addPath(p));
+		}
+
+		// Reset input
+		target.value = '';
 	}
 </script>
 
@@ -49,6 +75,20 @@
 				<span class={store.canUndo ? 'cursor-pointer text-white' : 'opacity-30'}>Undo</span>
 				<span class={store.canRedo ? 'cursor-pointer text-white' : 'opacity-30'}>Redo</span>
 			</div>
+
+			<input
+				type="file"
+				accept=".svg"
+				class="hidden"
+				bind:this={fileInput}
+				onchange={handleFileSelect}
+			/>
+
+			<button
+				class="mr-2 rounded bg-neutral-700 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-neutral-600"
+				onclick={handleImportClick}>Import SVG</button
+			>
+
 			<button
 				class="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-500"
 				onclick={handleExport}>Export SVG</button

@@ -37,9 +37,15 @@ export class SVGGenerator {
      * Generates a full SVG string
      */
     static toSVGString(paths: Path[], width: number = 800, height: number = 600): string {
-        const d = this.toPathData(paths);
+        const pathElements = paths.map(path => {
+            const d = this.toPathData([path]); // Use helper for single path
+            return `  <path d="${d}" fill="none" stroke="black" stroke-width="1"/>`;
+        }).join('\n');
+
         return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-  <path d="${d}" fill="none" stroke="black" stroke-width="1"/>
+  <g>
+${pathElements}
+  </g>
 </svg>`;
     }
 }
