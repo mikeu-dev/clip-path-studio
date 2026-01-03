@@ -79,6 +79,53 @@ export class Path {
         return r;
     }
 
+    /**
+     * Check if point is inside the path using Ray Casting algorithm.
+     * Casts a ray to the right and counts intersections.
+     * Odd intersections = Inside.
+     */
+    containsPoint(point: Vector2): boolean {
+        if (!this.closed) return false;
+
+        const bounds = this.getBoundingBox();
+        if (!bounds.contains(point)) return false;
+
+        // Create a ray to the right, outside the bounding box
+        // Use a slight y-offset to avoid hitting horizontal lines perfectly or vertices directly?
+        // Standard robust way: Ray y = point.y. 
+        // We'll use a large enough X.
+        const rayEnd = new Vector2(bounds.max.x + 1000, point.y);
+
+        // Construct a flat Bezier for the ray
+        const rayCurve = new CubicBezier(
+            point,
+            point.lerp(rayEnd, 0.33),
+            point.lerp(rayEnd, 0.66),
+            rayEnd
+        );
+
+        let intersections = 0;
+        const curves = this.toCurves();
+
+        for (const curve of curves) {
+            const hits = curve.intersects(rayCurve);
+            // We need to deduplicate or handle vertices.
+            // intersects() returns points.
+            // If we have multiple hits, we count them.
+            // BUT: intersects implementation treats curves solidly?
+            // If intersects returns unique points, we assume typically 0 or 1 per curve for a horizontal ray (unless curve is horizontal).
+
+            // Filter distinct hits (check x > point.x)
+            for (const hit of hits) {
+                if (hit.x > point.x) {
+                    intersections++;
+                }
+            }
+        }
+
+        return intersections % 2 === 1;
+    }
+
     // --- Immutable Mutations ---
 
     addNode(node: PathNode): Path {

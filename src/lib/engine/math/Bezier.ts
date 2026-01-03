@@ -3,6 +3,12 @@ import { Rect } from './Rect';
 import { EPSILON } from './MathUtils';
 import { LineSegment } from './LineSegment';
 
+export interface Intersection {
+    point: Vector2;
+    t1: number;
+    t2: number;
+}
+
 /**
  * Cubic Bezier Curve defined by 4 control points: p0, p1, p2, p3.
  * p0: start point
