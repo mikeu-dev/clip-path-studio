@@ -1,4 +1,4 @@
-import { equals, lerp, round } from './MathUtils';
+import { equals, lerp, round, EPSILON } from './MathUtils';
 
 export interface IPoint {
     x: number;
@@ -53,7 +53,7 @@ export class Vector2 implements IPoint {
     }
 
     div(scalar: number): Vector2 {
-        if (scalar === 0) throw new Error("Division by zero");
+        if (Math.abs(scalar) < EPSILON) throw new Error("Division by zero");
         return new Vector2(this.x / scalar, this.y / scalar);
     }
 
@@ -83,7 +83,7 @@ export class Vector2 implements IPoint {
 
     normalize(): Vector2 {
         const len = this.length();
-        return len === 0 ? Vector2.zero : this.div(len);
+        return len < EPSILON ? Vector2.zero : this.div(len);
     }
 
     distanceTo(v: Vector2): number {
@@ -99,6 +99,10 @@ export class Vector2 implements IPoint {
     }
 
     // --- Utilities ---
+
+    isZero(): boolean {
+        return this.lengthSq() < EPSILON * EPSILON;
+    }
 
     equals(v: Vector2): boolean {
         return equals(this.x, v.x) && equals(this.y, v.y);

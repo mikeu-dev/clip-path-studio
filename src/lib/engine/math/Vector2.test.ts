@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Vector2 } from './Vector2';
+import { EPSILON } from './MathUtils';
 
 describe('Vector2', () => {
     it('should create a vector with given coordinates', () => {
@@ -54,6 +55,31 @@ describe('Vector2', () => {
         expect(normalized.length()).toBeCloseTo(1);
     });
 
+    it('should handle zero vector normalization safe', () => {
+        const v = new Vector2(0, 0);
+        const normalized = v.normalize();
+        expect(normalized.x).toBe(0);
+        expect(normalized.y).toBe(0);
+    });
+
+    it('should handle epsilon-small vector normalization as zero', () => {
+        const v = new Vector2(EPSILON / 2, EPSILON / 2);
+        expect(v.normalize().x).toBe(0);
+        expect(v.normalize().y).toBe(0);
+    });
+
+    it('should throw error on division by zero', () => {
+        const v = new Vector2(1, 1);
+        expect(() => v.div(0)).toThrow();
+        expect(() => v.div(EPSILON / 2)).toThrow();
+    });
+
+    it('should check for zero with epsilon', () => {
+        expect(new Vector2(0, 0).isZero()).toBe(true);
+        expect(new Vector2(EPSILON / 2, 0).isZero()).toBe(true);
+        expect(new Vector2(EPSILON * 2, 0).isZero()).toBe(false);
+    });
+
     it('should support linear interpolation', () => {
         const v1 = new Vector2(0, 0);
         const v2 = new Vector2(10, 10);
@@ -63,12 +89,12 @@ describe('Vector2', () => {
     });
 
     it('should compare equality with epsilon', () => {
-        const v1 = new Vector2(1 / 3, 1);
-        const v2 = new Vector2(0.333333333, 1);
-        // default epsilon is 1e-9, 1/3 is 0.333333333333...
-        // depending on precision implementation it might fail if we are too strict, but let's check basic float equality
+        const v1 = new Vector2(1, 1);
+        const v2 = new Vector2(1 + EPSILON / 2, 1 - EPSILON / 2);
+        expect(v1.equals(v2)).toBe(true);
+
         const v3 = new Vector2(1, 1);
-        const v4 = new Vector2(1, 1);
-        expect(v3.equals(v4)).toBe(true);
+        const v4 = new Vector2(1 + EPSILON * 2, 1);
+        expect(v3.equals(v4)).toBe(false);
     });
 });

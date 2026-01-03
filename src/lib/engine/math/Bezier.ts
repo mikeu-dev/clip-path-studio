@@ -1,5 +1,6 @@
 import { Vector2 } from './Vector2';
 import { Rect } from './Rect';
+import { EPSILON } from './MathUtils';
 
 /**
  * Cubic Bezier Curve defined by 4 control points: p0, p1, p2, p3.
@@ -133,9 +134,9 @@ export class CubicBezier {
             const c = d0;
 
             // Solve at^2 + bt + c = 0
-            if (Math.abs(a) < 1e-9) {
+            if (Math.abs(a) < EPSILON) {
                 // Linear bt + c = 0 -> t = -c/b
-                if (Math.abs(b) > 1e-9) {
+                if (Math.abs(b) > EPSILON) {
                     const t = -c / b;
                     if (t > 0 && t < 1) {
                         const val = this.evaluate(t); // We only need one dimension actually but easier to call eval
@@ -168,8 +169,8 @@ export class CubicBezier {
 
             const roots: number[] = [];
             // at^2 + bt + c = 0
-            if (Math.abs(a) < 1e-9) {
-                if (Math.abs(b) > 1e-9) {
+            if (Math.abs(a) < EPSILON) {
+                if (Math.abs(b) > EPSILON) {
                     const t = -c / b;
                     if (t > 0 && t < 1) roots.push(t);
                 }

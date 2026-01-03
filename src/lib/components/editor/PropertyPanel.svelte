@@ -59,21 +59,14 @@
 
 		const newPath = path.updateNode(selectedNodeIndex, newNode);
 
-		// Update Store (Optimistic)
-		const newPaths = [...store.paths];
-		newPaths[pathIdx] = newPath;
-		store.setPaths(newPaths);
+		// Execute Command
+		store.execute(new UpdatePathCommand(store, path, newPath));
 	}
 
 	function updatePathClosed(path: import('$lib/engine/core/Path').Path, closed: boolean) {
 		const newPath = path.setClosed(closed);
-		// Update Store
-		const index = store.paths.findIndex((p) => p.id === path.id);
-		if (index !== -1) {
-			const newPaths = [...store.paths];
-			newPaths[index] = newPath;
-			store.setPaths(newPaths);
-		}
+		// Execute Command
+		store.execute(new UpdatePathCommand(store, path, newPath));
 	}
 </script>
 
