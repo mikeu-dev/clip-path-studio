@@ -1,5 +1,5 @@
 import { Vector2 } from './Vector2';
-import { clamp } from './MathUtils';
+import { clamp, EPSILON } from './MathUtils';
 
 export class LineSegment {
     readonly start: Vector2;
@@ -57,5 +57,40 @@ export class LineSegment {
 
     distanceToPoint(p: Vector2): number {
         return Math.sqrt(this.distanceToPointSq(p));
+    }
+
+    /**
+     * Check intersection with another line segment.
+     * Returns the intersection point or null if no intersection.
+     * Uses vector cross product method.
+     */
+    intersects(other: LineSegment): Vector2 | null {
+        const r = this.end.sub(this.start);
+        const s = other.end.sub(other.start);
+
+        const rxs = r.cross(s);
+        const qpxr = other.start.sub(this.start).cross(r);
+
+        // If r x s = 0 and (q - p) x r = 0, then the two lines are collinear.
+        if (Math.abs(rxs) < EPSILON && Math.abs(qpxr) < EPSILON) {
+            // Collinear - we ignore for now as typical bezier intersection won't hit this often
+            // or we handle overlap later. For strict intersection point, it's ambiguous (segment).
+            return null;
+        }
+
+        // If r x s = 0 and (q - p) x r != 0, then the two lines are parallel and non-intersecting.
+        if (Math.abs(rxs) < EPSILON && Math.abs(qpxr) >= EPSILON) {
+            return null;
+        }
+
+        const t = other.start.sub(this.start).cross(s) / rxs;
+        const u = other.start.sub(this.start).cross(r) / rxs;
+
+        // If r x s != 0 and 0 <= t <= 1 and 0 <= u <= 1, the two line segments meet at the point p + t r = q + u s.
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+            return this.start.add(r.mul(t));
+        }
+
+        return null;
     }
 }

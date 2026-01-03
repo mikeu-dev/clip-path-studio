@@ -1,6 +1,7 @@
 import { Vector2 } from './Vector2';
 import { Rect } from './Rect';
 import { EPSILON } from './MathUtils';
+import { LineSegment } from './LineSegment';
 
 /**
  * Cubic Bezier Curve defined by 4 control points: p0, p1, p2, p3.
@@ -203,5 +204,72 @@ export class CubicBezier {
         });
 
         return new Rect(new Vector2(minX, minY), new Vector2(maxX, maxY));
+    }
+
+    /**
+     * Check if curve is flat enough to be treated as a line segment
+     */
+    isFlat(tolerance: number = 0.5): boolean {
+        // Distance of p1 and p2 from line p0-p3
+        const line = new LineSegment(this.p0, this.p3);
+        const d1 = line.distanceToPointSq(this.p1);
+        const d2 = line.distanceToPointSq(this.p2);
+
+        return d1 < tolerance * tolerance && d2 < tolerance * tolerance;
+    }
+
+    /**
+     * Find intersection points with another cubic bezier.
+     * Uses divide and conquer (Bezier Clipping / Subdivision).
+     */
+    intersects(other: CubicBezier, threshold: number = 0.1, depth: number = 0): Vector2[] {
+        // 1. Bounding Box Optimization
+        if (!this.getBoundingBox().intersects(other.getBoundingBox())) {
+            return [];
+        }
+
+        // 2. Base case: max depth or flatness
+        // If we are deep enough, or both curves are flat, we intersect them as segments
+        if (depth > 10 || (this.isFlat(threshold) && other.isFlat(threshold))) {
+            const l1 = new LineSegment(this.p0, this.p3);
+            const l2 = new LineSegment(other.p0, other.p3);
+            const intersection = l1.intersects(l2);
+            return intersection ? [intersection] : [];
+        }
+
+        // 3. Recursive step
+        // Split the curve(s) that are not flat
+        const thisSplit = this.split(0.5);
+        const otherSplit = other.split(0.5);
+
+        const intersections: Vector2[] = [];
+
+        // Check all 4 combinations
+        const pairs: [CubicBezier, CubicBezier][] = [
+            [thisSplit[0], otherSplit[0]],
+            [thisSplit[0], otherSplit[1]],
+            [thisSplit[1], otherSplit[0]],
+            [thisSplit[1], otherSplit[1]]
+        ];
+
+        for (const [c1, c2] of pairs) {
+            const points = c1.intersects(c2, threshold, depth + 1);
+            intersections.push(...points);
+        }
+
+        // Deduplicate points (close points)
+        const unique: Vector2[] = [];
+        for (const p of intersections) {
+            let found = false;
+            for (const u of unique) {
+                if (p.distanceToSq(u) < threshold * threshold) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) unique.push(p);
+        }
+
+        return unique;
     }
 }
