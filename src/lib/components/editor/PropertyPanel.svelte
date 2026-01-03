@@ -124,8 +124,52 @@
 				{/if}
 			{/if}
 		</div>
-	{:else}
+	{:else if store.selectedPathIds.size !== 2}
 		<div class="mt-8 text-center text-neutral-600 italic">No selection</div>
 	{/if}
+
+	<!-- Boolean Ops (Only when exactly 2 paths selected) -->
+	{#if store.selectedPathIds.size === 2}
+		<div class="mt-4 border-t border-neutral-700 pt-4">
+			<h3 class="mb-2 font-bold tracking-wider text-neutral-500 uppercase">Boolean Ops</h3>
+			<div class="flex gap-2">
+				<button
+					class="rounded bg-neutral-700 px-3 py-1 hover:bg-neutral-600"
+					onclick={() => store.performBooleanOp('union')}
+					title="Union"
+				>
+					Union
+				</button>
+				<button
+					class="rounded bg-neutral-700 px-3 py-1 hover:bg-neutral-600"
+					onclick={() => store.performBooleanOp('subtract')}
+					title="Subtract"
+				>
+					Subtract
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Layers List -->
+	<div class="mt-8 border-t border-neutral-700 pt-4">
+		<h3 class="mb-2 font-bold tracking-wider text-neutral-500 uppercase">Layers</h3>
+		<div class="space-y-1">
+			{#each store.paths as path}
+				<div
+					class="flex cursor-pointer items-center rounded p-1 {store.selectedPathIds.has(path.id)
+						? 'bg-blue-900/30 text-blue-400'
+						: 'text-neutral-400 hover:bg-neutral-800'}"
+					onclick={() => store.selectPaths([path.id])}
+					role="button"
+					tabindex="0"
+					onkeydown={(e) => e.key === 'Enter' && store.selectPaths([path.id])}
+				>
+					<div class="mr-2 h-3 w-3 rounded-sm border border-current"></div>
+					<span>{path.id.slice(0, 8)}</span>
+				</div>
+			{/each}
+		</div>
+	</div>
 </div>
 ```
